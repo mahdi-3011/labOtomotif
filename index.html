@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penyimpanan Laboratorium Bengkel</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        auto: {
+                            dark: '#0f172a', // Dark blue/slate
+                            black: '#000000',
+                            silver: '#cbd5e1',
+                            orange: '#f97316', // Orange accent
+                            orangedark: '#ea580c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f97316;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* <blade keyframes|%20fadeIn%20%7B%20from%20%7B%20opacity%3A%200%3B%20transform%3A%20translateY(10px)%3B%20%7D%20to%20%7B%20opacity%3A%201%3B%20transform%3A%20translateY(0)%3B%20%7D%20%7D>.glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        } */
+        /* <blade keyframesfadeIn|%20%7B>from {
+            opacity: 0;
+            transform: translateY(10px);
+        } */
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Responsive Table Wrapper */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 40;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-100 text-slate-800 font-sans antialiased overflow-hidden selection:bg-auto-orange selection:text-white">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
+
+    <!-- 1. LOGIN VIEW -->
+    <div id="view-login"
+        class="h-screen w-screen flex items-center justify-center bg-auto-dark bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md text-white fade-in">
+            <div class="text-center mb-8">
+                <img src="image/logo.png" alt="Logo Bengkel" class="w-70 mx-auto mb-4">
+                <!-- <i class="fa-solid fa-car-side text-5xl text-auto-orange mb-4"></i> -->
+                <h1 class="text-2xl font-bold uppercase tracking-wider">Lab Bengkel Rekayasa Otomotif</h1>
+                <p class="text-auto-silver text-sm">Sistem Penyimpanan Sementara</p>
+            </div>
+            <form id="form-login" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="login-username" required
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:border-auto-orange transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-400"></i>
+                        <input type="password" id="login-password" required
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:border-auto-orange transition">
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full bg-auto-orange hover:bg-auto-orangedark text-white font-bold py-3 rounded-lg transition shadow-lg shadow-orange-500/30">
+                    MASUK KE SISTEM <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+            <div class="mt-6 text-center text-xs text-slate-400">
+                <p>Default Admin: admin / admin</p>
+                <p>Default Tamu: tamu / tamu</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APP LAYOUT (Admin & Tamu) -->
+    <div id="view-app" class="h-screen w-screen flex hidden bg-slate-100">
+
+        <!-- Sidebar (Desktop & Mobile Drawer) -->
+        <aside id="sidebar"
+            class="bg-auto-dark text-auto-silver w-64 flex-shrink-0 flex flex-col h-full absolute lg:relative z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 shadow-xl">
+            <div class="p-4 flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 bg-auto-orange rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-white leading-tight">Lab Bengkel</h2>
+                        <span class="text-[10px] uppercase tracking-wider text-auto-orange"
+                            id="user-role-badge">Admin</span>
+                    </div>
+                </div>
+                <button id="btn-close-sidebar" class="lg:hidden text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto p-4 space-y-1" id="sidebar-menu">
+                <!-- Menu Dinamis akan di-render di sini -->
+            </nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <img id="sidebar-user-avatar"
+                        src="https://ui-avatars.com/api/?name=User&background=f97316&color=fff"
+                        class="w-10 h-10 rounded-full border-2 border-slate-700">
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-bold text-white truncate" id="sidebar-user-name">Nama User</p>
+                        <p class="text-xs text-slate-400 truncate" id="sidebar-user-id">ID</p>
+                    </div>
+                </div>
+                <button onclick="App.logout()"
+                    class="w-full bg-slate-800 hover:bg-red-600 hover:text-white text-slate-300 py-2 rounded transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Overlay for Mobile Sidebar -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="App.toggleSidebar()">
+        </div>
+
+        <!-- Main Content Wrapper -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden w-full relative">
+            <!-- Topbar -->
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 lg:px-6 z-10 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-600 hover:text-auto-orange">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="topbar-title" class="text-xl font-bold text-slate-800 hidden sm:block">Dashboard</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="App.navigate('notifikasi')"
+                        class="relative text-slate-500 hover:text-auto-orange transition">
+                        <i class="fa-solid fa-bell text-xl"></i>
+                        <span id="notif-badge"
+                            class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center hidden">0</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div id="main-content" class="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50 relative pb-24">
+                <!-- Konten dinamis dirender di sini -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. MODAL CONTAINER GLOBAL -->
+    <div id="modal-backdrop"
+        class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div id="modal-content"
+            class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col transform scale-95 transition-transform">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 id="modal-title" class="text-lg font-bold text-slate-800">Title</h3>
+                <button onclick="UI.closeModal()" class="text-slate-400 hover:text-red-500 transition"><i
+                        class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <!-- Modal Body -->
+            <div id="modal-body" class="p-6 overflow-y-auto bg-white">
+                <!-- Form/Konten dinamis -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CORE JAVASCRIPT LOGIC                      -->
+    <!-- ========================================== -->
+    <script>
+        // --- 1. LOCAL STORAGE DATABASE MOCK ---
+        const DB_KEY = 'bengkel_storage_db';
+
+        // Inisialisasi Database Default jika kosong
+        const initDB = () => {
+            if (!localStorage.getItem(DB_KEY)) {
+                const initialData = {
+                    users: [{
+                            id: 'USR-001',
+                            nama: 'Administrator',
+                            username: 'admin',
+                            password: '123',
+                            role: 'admin',
+                            hp: '08123456789',
+                            email: 'admin@bengkel.com',
+                            status: 'active',
+                            created: new Date().toISOString()
+                        },
+                        {
+                            id: 'USR-002',
+                            nama: 'Budi Tamu',
+                            username: 'tamu',
+                            password: '123',
+                            role: 'tamu',
+                            hp: '08987654321',
+                            email: 'budi@gmail.com',
+                            status: 'active',
+                            created: new Date().toISOString()
+                        }
+                    ],
+                    barang: [{
+                            id: 'BRG-001',
+                            kode: 'SPL-01',
+                            nama: 'Kunci Pas Set',
+                            kategori: 'Tools',
+                            jumlah: 5,
+                            lokasi: 'Rak A1',
+                            kondisi: 'Baik',
+                            deskripsi: 'Set kunci pas 10-24mm',
+                            tanggal: new Date().toISOString()
+                        },
+                        {
+                            id: 'BRG-002',
+                            kode: 'SPR-02',
+                            nama: 'Oli Mesin 10W-40',
+                            kategori: 'Sparepart',
+                            jumlah: 12,
+                            lokasi: 'Gudang B',
+                            kondisi: 'Baru',
+                            deskripsi: 'Oli sintetik',
+                            tanggal: new Date().toISOString()
+                        }
+                    ],
+                    penyimpanan: [{
+                        id: 'PNY-001',
+                        userId: 'USR-002',
+                        namaUser: 'Budi Tamu',
+                        namaBarang: 'Helm Full Face',
+                        kategori: 'Aksesoris',
+                        jumlah: 1,
+                        kondisi: 'Baik',
+                        tglMasuk: new Date().toISOString(),
+                        estimasiAmbil: new Date(Date.now() + 86400000).toISOString(),
+                        status: 'Disimpan',
+                        catatan: 'Disimpan di loker 5'
+                    }],
+                    logs: [{
+                        id: 'LOG-001',
+                        user: 'System',
+                        aktivitas: 'Inisialisasi Sistem',
+                        waktu: new Date().toISOString()
+                    }],
+                    notifikasi: []
+                };
+                localStorage.setItem(DB_KEY, JSON.stringify(initialData));
+            }
+        };
+
+        const DB = {
+            get: () => JSON.parse(localStorage.getItem(DB_KEY)),
+            save: (data) => localStorage.setItem(DB_KEY, JSON.stringify(data)),
+            getTable: (tableName) => DB.get()[tableName] || [],
+            saveTable: (tableName, tableData) => {
+                let db = DB.get();
+                db[tableName] = tableData;
+                DB.save(db);
+            },
+            insert: (table, item) => {
+                let data = DB.getTable(table);
+                item.id = item.id || Utils.generateID(table);
+                item.created_at = new Date().toISOString();
+                data.unshift(item); // Masukkan di awal
+                DB.saveTable(table, data);
+                if (App.currentUser) DB.addLog(`Menambahkan data ke ${table}: ${item.nama || item.id}`);
+                return item;
+            },
+            update: (table, id, updatedData) => {
+                let data = DB.getTable(table);
+                let index = data.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    data[index] = {
+                        ...data[index],
+                        ...updatedData,
+                        updated_at: new Date().toISOString()
+                    };
+                    DB.saveTable(table, data);
+                    if (App.currentUser) DB.addLog(`Mengubah data di ${table} (ID: ${id})`);
+                    return true;
+                }
+                return false;
+            },
+            delete: (table, id) => {
+                let data = DB.getTable(table);
+                let filtered = data.filter(item => item.id !== id);
+                if (data.length !== filtered.length) {
+                    DB.saveTable(table, filtered);
+                    if (App.currentUser) DB.addLog(`Menghapus data dari ${table} (ID: ${id})`);
+                    return true;
+                }
+                return false;
+            },
+            addLog: (aktivitas) => {
+                let logs = DB.getTable('logs');
+                logs.unshift({
+                    id: Utils.generateID('LOG'),
+                    user: App.currentUser ? App.currentUser.nama : 'System',
+                    aktivitas: aktivitas,
+                    waktu: new Date().toISOString()
+                });
+                if (logs.length > 500) logs.pop(); // Limit logs
+                DB.saveTable('logs', logs);
+            },
+            addNotif: (userId, pesan) => {
+                let notif = DB.getTable('notifikasi');
+                notif.unshift({
+                    id: Utils.generateID('NTF'),
+                    userId: userId,
+                    pesan: pesan,
+                    status: 'unread',
+                    waktu: new Date().toISOString()
+                });
+                DB.saveTable('notifikasi', notif);
+            }
+        };
+
+        // --- 2. UTILITY FUNCTIONS ---
+        const Utils = {
+            generateID: (prefix) => {
+                const tableCode = prefix.substring(0, 3).toUpperCase();
+                return `${tableCode}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
+            },
+            formatDate: (isoString) => {
+                if (!isoString) return '-';
+                const date = new Date(isoString);
+                return date.toLocaleDateString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+            fileToBase64: (file) => {
+                return new Promise((resolve, reject) => {
+                    if (!file) resolve(null);
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            },
+            downloadCSV: (data, filename) => {
+                if (data.length === 0) return UI.toast('Data kosong', 'warning');
+                const headers = Object.keys(data[0]).join(',');
+                const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join(',')).join('\n');
+                const csv = `${headers}\n${rows}`;
+                const blob = new Blob([csv], {
+                    type: 'text/csv'
+                });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', filename + '.csv');
+                a.click();
+            }
+        };
+
+        // --- 3. UI COMPONENTS & HELPERS ---
+        const UI = {
+            toast: (msg, type = 'success') => {
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-orange-500',
+                    info: 'bg-blue-500'
+                };
+                const icons = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    warning: 'fa-triangle-exclamation',
+                    info: 'fa-info-circle'
+                };
+
+                const toast = document.createElement('div');
+                toast.className =
+                    `${colors[type]} text-white px-4 py-3 rounded shadow-lg flex items-center gap-3 fade-in max-w-xs`;
+                toast.innerHTML =
+                    `<i class="fa-solid ${icons[type]} text-lg"></i> <span class="text-sm font-medium">${msg}</span>`;
+
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.replace('fade-in', 'opacity-0');
+                    toast.classList.add('transition-opacity', 'duration-300');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+            confirm: (title, text, confirmCallback) => {
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f97316',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Lanjutkan!',
+                    cancelButtonText: 'Batal',
+                    background: '#ffffff',
+                    color: '#1e293b',
+                    borderRadius: '1rem'
+                }).then((result) => {
+                    if (result.isConfirmed) confirmCallback();
+                });
+            },
+            openModal: (title, contentHTML) => {
+                document.getElementById('modal-title').innerText = title;
+                document.getElementById('modal-body').innerHTML = contentHTML;
+                const modal = document.getElementById('modal-backdrop');
+                const content = document.getElementById('modal-content');
+                modal.classList.remove('hidden');
+                setTimeout(() => content.classList.replace('scale-95', 'scale-100'), 10);
+            },
+            closeModal: () => {
+                const modal = document.getElementById('modal-backdrop');
+                const content = document.getElementById('modal-content');
+                content.classList.replace('scale-100', 'scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            },
+            renderBadge: (status) => {
+                const map = {
+                    'Disimpan': 'bg-green-100 text-green-700 border-green-200',
+                    'Pending': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                    'Diambil': 'bg-blue-100 text-blue-700 border-blue-200',
+                    'Terlambat': 'bg-red-100 text-red-700 border-red-200',
+                    'Baik': 'bg-green-100 text-green-700 border-green-200',
+                    'Rusak': 'bg-red-100 text-red-700 border-red-200',
+                    'admin': 'bg-purple-100 text-purple-700 border-purple-200',
+                    'tamu': 'bg-gray-100 text-gray-700 border-gray-200'
+                };
+                const cls = map[status] || 'bg-slate-100 text-slate-700 border-slate-200';
+                return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}">${status}</span>`;
+            },
+            updateNotifBadge: () => {
+                if (!App.currentUser) return;
+                const notifs = DB.getTable('notifikasi').filter(n => n.userId === App.currentUser.id && n
+                    .status === 'unread');
+                const badge = document.getElementById('notif-badge');
+                if (notifs.length > 0) {
+                    badge.innerText = notifs.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        };
+
+        // --- 4. DATA TABLE GENERATOR ---
+        // Komponen Reusable untuk Render Table + Filter + Pagination
+        class DataTable {
+            constructor(config) {
+                this.config = config; // containerId, title, data, columns, actions, onEdit, onDelete, etc.
+                this.currentPage = 1;
+                this.itemsPerPage = 10;
+                this.searchQuery = '';
+                this.filterKey = '';
+                this.filterValue = '';
+                this.sortCol = '';
+                this.sortAsc = true;
+                this.render();
+            }
+
+            getFilteredData() {
+                let data = [...this.config.data];
+
+                // Search
+                if (this.searchQuery) {
+                    const q = this.searchQuery.toLowerCase();
+                    data = data.filter(item =>
+                        Object.values(item).some(val => String(val).toLowerCase().includes(q))
+                    );
+                }
+
+                // Filter
+                if (this.filterKey && this.filterValue) {
+                    data = data.filter(item => item[this.filterKey] === this.filterValue);
+                }
+
+                // Sort
+                if (this.sortCol) {
+                    data.sort((a, b) => {
+                        let valA = a[this.sortCol] || '';
+                        let valB = b[this.sortCol] || '';
+                        if (typeof valA === 'string') valA = valA.toLowerCase();
+                        if (typeof valB === 'string') valB = valB.toLowerCase();
+                        if (valA < valB) return this.sortAsc ? -1 : 1;
+                        if (valA > valB) return this.sortAsc ? 1 : -1;
+                        return 0;
+                    });
+                }
+
+                return data;
+            }
+
+            render() {
+                const container = document.getElementById(this.config.containerId);
+                const filteredData = this.getFilteredData();
+                const totalPages = Math.ceil(filteredData.length / this.itemsPerPage) || 1;
+                if (this.currentPage > totalPages) this.currentPage = totalPages;
+
+                const startIdx = (this.currentPage - 1) * this.itemsPerPage;
+                const paginatedData = filteredData.slice(startIdx, startIdx + this.itemsPerPage);
+
+                // Build HTML
+                let html = `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+                        <!-- Toolbar -->
+                        <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="flex items-center gap-2 w-full md:w-auto">
+                                <div class="relative w-full md:w-64">
+                                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                                    <input type="text" id="dt-search" value="${this.searchQuery}" placeholder="Cari data..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-auto-orange">
+                                </div>
+                                ${this.config.filters ? this.buildFilters() : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="Utils.downloadCSV(${JSON.stringify(this.config.data).replace(/"/g, '&quot;')}, '${this.config.title}')" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-slate-700 transition" title="Export CSV"><i class="fa-solid fa-file-csv"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+                                    <tr>
+                                        ${this.config.columns.map(c => `
+                                            <th class="px-6 py-3 cursor-pointer hover:bg-slate-200 transition" onclick="window.activeTable.handleSort('${c.key}')">
+                                                ${c.label} ${this.sortCol === c.key ? (this.sortAsc ? '↑' : '↓') : ''}
+                                            </th>
+                                        `).join('')}
+                                        <th class="px-6 py-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    ${paginatedData.length === 0 ? `<tr><td colspan="${this.config.columns.length + 1}" class="px-6 py-8 text-center text-slate-500">Tidak ada data ditemukan</td></tr>` : ''}
+                                    ${paginatedData.map(row => `
+                                        <tr class="hover:bg-slate-50 transition">
+                                            ${this.config.columns.map(c => `
+                                                <td class="px-6 py-3">${this.renderCell(row, c)}</td>
+                                            `).join('')}
+                                            <td class="px-6 py-3 text-right">
+                                                <div class="flex items-center justify-end gap-2">
+                                                    ${this.buildActions(row)}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="p-4 border-t border-slate-200 flex items-center justify-between text-sm text-slate-600">
+                            <div>Menampilkan ${filteredData.length === 0 ? 0 : startIdx + 1} - ${Math.min(startIdx + this.itemsPerPage, filteredData.length)} dari ${filteredData.length} data</div>
+                            <div class="flex gap-1">
+                                <button onclick="window.activeTable.changePage(${this.currentPage - 1})" class="px-3 py-1 border rounded hover:bg-slate-100 ${this.currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === 1 ? 'disabled' : ''}>Prev</button>
+                                <span class="px-3 py-1 bg-auto-orange text-white rounded">${this.currentPage} / ${totalPages}</span>
+                                <button onclick="window.activeTable.changePage(${this.currentPage + 1})" class="px-3 py-1 border rounded hover:bg-slate-100 ${this.currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === totalPages ? 'disabled' : ''}>Next</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                window.activeTable = this;
+
+                // Attach events
+                const searchInput = document.getElementById('dt-search');
+                searchInput.addEventListener('keyup', (e) => {
+                    this.searchQuery = e.target.value;
+                    this.currentPage = 1;
+                    this.render();
+                    document.getElementById('dt-search').focus(); // maintain focus
+                });
+            }
+
+            buildFilters() {
+                return this.config.filters.map(f => `
+                    <select onchange="window.activeTable.handleFilter('${f.key}', this.value)" class="py-2 pl-2 pr-6 text-sm border border-slate-300 rounded-lg focus:outline-none">
+                        <option value="">Semua ${f.label}</option>
+                        ${f.options.map(opt => `<option value="${opt}" ${this.filterKey===f.key && this.filterValue===opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>
+                `).join('');
+            }
+
+            handleFilter(key, value) {
+                this.filterKey = key;
+                this.filterValue = value;
+                this.currentPage = 1;
+                this.render();
+            }
+
+            handleSort(key) {
+                if (this.sortCol === key) {
+                    this.sortAsc = !this.sortAsc;
+                } else {
+                    this.sortCol = key;
+                    this.sortAsc = true;
+                }
+                this.render();
+            }
+
+            changePage(page) {
+                this.currentPage = page;
+                this.render();
+            }
+
+            renderCell(row, col) {
+                let val = row[col.key];
+                if (col.format === 'date') return Utils.formatDate(val);
+                if (col.format === 'badge') return UI.renderBadge(val);
+                if (col.format === 'image') return val ?
+                    `<img src="${val}" class="w-10 h-10 object-cover rounded shadow-sm cursor-pointer" onclick="UI.openModal('Preview', '<img src=\\'${val}\\' class=\\'w-full rounded\\'>')">` :
+                    '<div class="w-10 h-10 bg-slate-200 rounded flex items-center justify-center text-slate-400"><i class="fa fa-image"></i></div>';
+                if (col.format === 'bold') return `<strong>${val}</strong>`;
+                return val || '-';
+            }
+
+            buildActions(row) {
+                let html = '';
+                if (this.config.actions.includes('edit')) {
+                    html +=
+                        `<button onclick="${this.config.onEdit}('${row.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Edit"><i class="fa-solid fa-edit"></i></button>`;
+                }
+                if (this.config.actions.includes('delete')) {
+                    html +=
+                        `<button onclick="${this.config.onDelete}('${row.id}')" class="text-red-500 hover:text-red-700 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>`;
+                }
+                if (this.config.customActions) {
+                    this.config.customActions.forEach(a => {
+                        if (a.condition && !a.condition(row)) return;
+                        html +=
+                            `<button onclick="${a.action}('${row.id}')" class="${a.class} p-1" title="${a.title}"><i class="${a.icon}"></i></button>`;
+                    });
+                }
+                return html;
+            }
+        }
+
+        // --- 5. APPLICATION LOGIC & ROUTING ---
+        const App = {
+            currentUser: null,
+            views: {
+                login: document.getElementById('view-login'),
+                app: document.getElementById('view-app')
+            },
+
+            init: () => {
+                initDB();
+                const session = localStorage.getItem('bengkel_session');
+                if (session) {
+                    App.currentUser = JSON.parse(session);
+                    App.showApp();
+                } else {
+                    App.showLogin();
+                }
+
+                // Setup Login Form
+                document.getElementById('form-login').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    App.login();
+                });
+            },
+
+            login: () => {
+                const u = document.getElementById('login-username').value;
+                const p = document.getElementById('login-password').value;
+                const users = DB.getTable('users');
+                const user = users.find(x => x.username === u && x.password === p && x.status === 'active');
+
+                if (user) {
+                    App.currentUser = user;
+                    localStorage.setItem('bengkel_session', JSON.stringify(user));
+                    DB.addLog('Login ke sistem');
+                    UI.toast(`Selamat datang, ${user.nama}!`);
+                    App.showApp();
+                } else {
+                    UI.toast('Username/Password salah atau akun dinonaktifkan!', 'error');
+                }
+            },
+
+            logout: () => {
+                DB.addLog('Logout dari sistem');
+                localStorage.removeItem('bengkel_session');
+                App.currentUser = null;
+                App.showLogin();
+            },
+
+            showLogin: () => {
+                App.views.app.classList.add('hidden');
+                App.views.login.classList.remove('hidden');
+                document.getElementById('form-login').reset();
+            },
+
+            showApp: () => {
+                App.views.login.classList.add('hidden');
+                App.views.app.classList.remove('hidden');
+
+                // Update Sidebar Info
+                document.getElementById('sidebar-user-name').innerText = App.currentUser.nama;
+                document.getElementById('sidebar-user-id').innerText = App.currentUser.id;
+                document.getElementById('user-role-badge').innerText = App.currentUser.role;
+
+                App.renderMenu();
+                UI.updateNotifBadge();
+
+                // Navigate to default route
+                if (App.currentUser.role === 'admin') App.navigate('dashboard-admin');
+                else App.navigate('dashboard-tamu');
+            },
+
+            toggleSidebar: () => {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            },
+
+            renderMenu: () => {
+                const menuContainer = document.getElementById('sidebar-menu');
+                let menus = [];
+                if (App.currentUser.role === 'admin') {
+                    menus = [{
+                            id: 'dashboard-admin',
+                            icon: 'fa-chart-pie',
+                            text: 'Dashboard'
+                        },
+                        {
+                            id: 'barang',
+                            icon: 'fa-box',
+                            text: 'Data Barang'
+                        },
+                        {
+                            id: 'penyimpanan',
+                            icon: 'fa-warehouse',
+                            text: 'Penyimpanan'
+                        },
+                        {
+                            id: 'users',
+                            icon: 'fa-users',
+                            text: 'Manajemen User'
+                        },
+                        {
+                            id: 'laporan',
+                            icon: 'fa-file-pdf',
+                            text: 'Laporan'
+                        },
+                        {
+                            id: 'logs',
+                            icon: 'fa-history',
+                            text: 'Riwayat Aktivitas'
+                        }
+                    ];
+                } else {
+                    menus = [{
+                            id: 'dashboard-tamu',
+                            icon: 'fa-home',
+                            text: 'Dashboard'
+                        },
+                        {
+                            id: 'titip',
+                            icon: 'fa-box-open',
+                            text: 'Penitipan Barang'
+                        },
+                        {
+                            id: 'profil',
+                            icon: 'fa-user',
+                            text: 'Profil Saya'
+                        }
+                    ];
+                }
+
+                menuContainer.innerHTML = menus.map(m => `
+                    <a href="#" onclick="App.navigate('${m.id}')" id="menu-${m.id}" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid ${m.icon} w-5 text-center"></i>
+                        <span class="font-medium text-sm">${m.text}</span>
+                    </a>
+                `).join('');
+            },
+
+            navigate: (route) => {
+                // Update active menu style
+                document.querySelectorAll('.sidebar-item').forEach(el => {
+                    el.classList.remove('bg-auto-orange', 'text-white');
+                    el.classList.add('text-slate-400', 'hover:bg-slate-800');
+                });
+                const activeMenu = document.getElementById(`menu-${route}`);
+                if (activeMenu) {
+                    activeMenu.classList.remove('text-slate-400', 'hover:bg-slate-800');
+                    activeMenu.classList.add('bg-auto-orange', 'text-white');
+                }
+
+                // Hide sidebar on mobile after click
+                if (window.innerWidth < 1024) {
+                    document.getElementById('sidebar').classList.add('-translate-x-full');
+                    document.getElementById('sidebar-overlay').classList.add('hidden');
+                }
+
+                const content = document.getElementById('main-content');
+                content.innerHTML = ''; // Clear
+
+                // Routing Switch
+                switch (route) {
+                    case 'dashboard-admin':
+                        Modules.Admin.renderDashboard();
+                        break;
+                    case 'barang':
+                        Modules.Admin.renderBarang();
+                        break;
+                    case 'penyimpanan':
+                        Modules.Admin.renderPenyimpanan();
+                        break;
+                    case 'users':
+                        Modules.Admin.renderUsers();
+                        break;
+                    case 'laporan':
+                        Modules.Admin.renderLaporan();
+                        break;
+                    case 'logs':
+                        Modules.Admin.renderLogs();
+                        break;
+
+                    case 'dashboard-tamu':
+                        Modules.Tamu.renderDashboard();
+                        break;
+                    case 'titip':
+                        Modules.Tamu.renderTitip();
+                        break;
+                    case 'profil':
+                        Modules.Tamu.renderProfil();
+                        break;
+                    case 'notifikasi':
+                        Modules.Global.renderNotifikasi();
+                        break;
+                }
+            }
+        };
+
+        // --- 6. MODULES (ADMIN & TAMU) ---
+        const Modules = {
+
+            // ================= ADMIN MODULES =================
+            Admin: {
+                renderDashboard: () => {
+                    document.getElementById('topbar-title').innerText = 'Dashboard Admin';
+                    const barang = DB.getTable('barang');
+                    const peny = DB.getTable('penyimpanan');
+                    const users = DB.getTable('users');
+
+                    const activePeny = peny.filter(p => p.status === 'Disimpan' || p.status === 'Pending')
+                        .length;
+
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 fade-in">
+                            ${Modules.Helpers.statCard('Total Barang', barang.length, 'fa-box', 'bg-blue-500')}
+                            ${Modules.Helpers.statCard('Penyimpanan Aktif', activePeny, 'fa-warehouse', 'bg-orange-500')}
+                            ${Modules.Helpers.statCard('Total User', users.length, 'fa-users', 'bg-green-500')}
+                            ${Modules.Helpers.statCard('Barang Rusak', barang.filter(b=>b.kondisi==='Rusak').length, 'fa-exclamation-triangle', 'bg-red-500')}
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in" style="animation-delay: 0.1s">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-slate-700 mb-4">Statistik Kategori Barang</h3>
+                                <!-- Tambahan wrapper relative h-64 untuk mencegah loop perulangan ukuran canvas -->
+                                <div class="relative h-64 w-full flex items-center justify-center">
+                                    <canvas id="chartKategori"></canvas>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-slate-700 mb-4">Aktivitas Terakhir</h3>
+                                <ul class="space-y-3">
+                                    ${DB.getTable('logs').slice(0,5).map(l => `
+                                        <li class="flex items-start gap-3 text-sm">
+                                            <div class="mt-1 w-2 h-2 rounded-full bg-auto-orange"></div>
+                                            <div>
+                                                <p class="font-medium text-slate-800">${l.aktivitas}</p>
+                                                <p class="text-xs text-slate-500">${l.user} • ${Utils.formatDate(l.waktu)}</p>
+                                            </div>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+
+                    // Render Chart
+                    const ctx = document.getElementById('chartKategori');
+                    const kats = [...new Set(barang.map(b => b.kategori))];
+                    const counts = kats.map(k => barang.filter(b => b.kategori === k).length);
+
+                    // Hapus instance chart lama jika ada agar tidak menumpuk/looping memori
+                    if (window.myChartInstance) {
+                        window.myChartInstance.destroy();
+                    }
+
+                    window.myChartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: kats.length ? kats : ['Kosong'],
+                            datasets: [{
+                                data: kats.length ? counts : [1],
+                                backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#6366f1',
+                                    '#e2e8f0'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                },
+
+                renderBarang: () => {
+                    document.getElementById('topbar-title').innerText = 'Manajemen Data Barang';
+                    const content = document.getElementById('main-content');
+                    content.innerHTML = `
+                        <div id="table-barang-container"></div>
+                        <button onclick="Modules.Admin.formBarang()" class="fab bg-auto-orange text-white w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-lg hover:bg-auto-orangedark transition">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    `;
+
+                    new DataTable({
+                        containerId: 'table-barang-container',
+                        title: 'Data_Barang',
+                        data: DB.getTable('barang'),
+                        columns: [{
+                                key: 'foto',
+                                label: 'Foto',
+                                format: 'image'
+                            },
+                            {
+                                key: 'kode',
+                                label: 'Kode',
+                                format: 'bold'
+                            },
+                            {
+                                key: 'nama',
+                                label: 'Nama Barang'
+                            },
+                            {
+                                key: 'kategori',
+                                label: 'Kategori'
+                            },
+                            {
+                                key: 'jumlah',
+                                label: 'Stok'
+                            },
+                            {
+                                key: 'lokasi',
+                                label: 'Lokasi'
+                            },
+                            {
+                                key: 'kondisi',
+                                label: 'Kondisi',
+                                format: 'badge'
+                            }
+                        ],
+                        filters: [{
+                                key: 'kategori',
+                                label: 'Kategori',
+                                options: ['Tools', 'Sparepart', 'Cairan', 'Aksesoris']
+                            },
+                            {
+                                key: 'kondisi',
+                                label: 'Kondisi',
+                                options: ['Baik', 'Rusak', 'Perbaikan']
+                            }
+                        ],
+                        actions: ['edit', 'delete'],
+                        onEdit: 'Modules.Admin.formBarang',
+                        onDelete: 'Modules.Admin.deleteBarang'
+                    });
+                },
+
+                formBarang: (id = null) => {
+                    const isEdit = !!id;
+                    const data = isEdit ? DB.getTable('barang').find(b => b.id === id) : {};
+
+                    const html = `
+                        <form id="form-crud-barang" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Kode Barang</label><input type="text" id="b-kode" value="${data.kode || ''}" required class="w-full border p-2 rounded focus:border-auto-orange outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Nama Barang</label><input type="text" id="b-nama" value="${data.nama || ''}" required class="w-full border p-2 rounded focus:border-auto-orange outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Kategori</label>
+                                    <select id="b-kategori" required class="w-full border p-2 rounded focus:border-auto-orange outline-none">
+                                        <option value="Tools" ${data.kategori==='Tools'?'selected':''}>Tools</option>
+                                        <option value="Sparepart" ${data.kategori==='Sparepart'?'selected':''}>Sparepart</option>
+                                        <option value="Cairan" ${data.kategori==='Cairan'?'selected':''}>Cairan</option>
+                                        <option value="Aksesoris" ${data.kategori==='Aksesoris'?'selected':''}>Aksesoris</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm font-medium mb-1">Jumlah</label><input type="number" min="0" id="b-jumlah" value="${data.jumlah || ''}" required class="w-full border p-2 rounded focus:border-auto-orange outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Lokasi</label><input type="text" id="b-lokasi" value="${data.lokasi || ''}" required class="w-full border p-2 rounded focus:border-auto-orange outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Kondisi</label>
+                                    <select id="b-kondisi" required class="w-full border p-2 rounded focus:border-auto-orange outline-none">
+                                        <option value="Baik" ${data.kondisi==='Baik'?'selected':''}>Baik</option>
+                                        <option value="Rusak" ${data.kondisi==='Rusak'?'selected':''}>Rusak</option>
+                                        <option value="Perbaikan" ${data.kondisi==='Perbaikan'?'selected':''}>Perlu Perbaikan</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Foto Barang</label>
+                                <input type="file" id="b-foto" accept="image/*" class="w-full border p-2 rounded text-sm">
+                                ${data.foto ? `<p class="text-xs text-green-600 mt-1">Foto sudah ada, upload baru untuk mengganti.</p>` : ''}
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Deskripsi</label><textarea id="b-desk" class="w-full border p-2 rounded focus:border-auto-orange outline-none h-20">${data.deskripsi || ''}</textarea></div>
+                            <div class="flex justify-end gap-2 pt-4 border-t">
+                                <button type="button" onclick="UI.closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded transition">Batal</button>
+                                <button type="submit" class="px-4 py-2 bg-auto-orange hover:bg-auto-orangedark text-white rounded transition">Simpan Data</button>
+                            </div>
+                        </form>
+                    `;
+                    UI.openModal(isEdit ? 'Edit Data Barang' : 'Tambah Barang Baru', html);
+
+                    document.getElementById('form-crud-barang').onsubmit = async (e) => {
+                        e.preventDefault();
+                        const fileInput = document.getElementById('b-foto');
+                        let fotoBase64 = data.foto || null;
+                        if (fileInput.files.length > 0) {
+                            try {
+                                fotoBase64 = await Utils.fileToBase64(fileInput.files[0]);
+                            } catch (e) {}
+                        }
+
+                        const payload = {
+                            id: isEdit ? id : null,
+                            kode: document.getElementById('b-kode').value,
+                            nama: document.getElementById('b-nama').value,
+                            kategori: document.getElementById('b-kategori').value,
+                            jumlah: parseInt(document.getElementById('b-jumlah').value),
+                            lokasi: document.getElementById('b-lokasi').value,
+                            kondisi: document.getElementById('b-kondisi').value,
+                            foto: fotoBase64,
+                            deskripsi: document.getElementById('b-desk').value,
+                        };
+
+                        if (isEdit) DB.update('barang', id, payload);
+                        else DB.insert('barang', payload);
+
+                        UI.closeModal();
+                        UI.toast('Data barang berhasil disimpan!');
+                        App.navigate('barang'); // Refresh
+                    };
+                },
+
+                deleteBarang: (id) => {
+                    UI.confirm('Hapus Barang?', 'Data yang dihapus tidak dapat dikembalikan.', () => {
+                        DB.delete('barang', id);
+                        UI.toast('Data terhapus.');
+                        App.navigate('barang');
+                    });
+                },
+
+                renderPenyimpanan: () => {
+                    document.getElementById('topbar-title').innerText = 'Data Penitipan Barang';
+                    document.getElementById('main-content').innerHTML =
+                        `<div id="table-penyimpanan-container"></div>`;
+
+                    new DataTable({
+                        containerId: 'table-penyimpanan-container',
+                        title: 'Data_Penyimpanan',
+                        data: DB.getTable('penyimpanan'),
+                        columns: [{
+                                key: 'id',
+                                label: 'ID Transaksi',
+                                format: 'bold'
+                            },
+                            {
+                                key: 'namaUser',
+                                label: 'Penitip'
+                            },
+                            {
+                                key: 'namaBarang',
+                                label: 'Barang'
+                            },
+                            {
+                                key: 'jumlah',
+                                label: 'Qty'
+                            },
+                            {
+                                key: 'tglMasuk',
+                                label: 'Tgl Masuk',
+                                format: 'date'
+                            },
+                            {
+                                key: 'estimasiAmbil',
+                                label: 'Estimasi Ambil',
+                                format: 'date'
+                            },
+                            {
+                                key: 'status',
+                                label: 'Status',
+                                format: 'badge'
+                            }
+                        ],
+                        filters: [{
+                            key: 'status',
+                            label: 'Status',
+                            options: ['Pending', 'Disimpan', 'Diambil', 'Terlambat']
+                        }],
+                        actions: ['edit', 'delete'],
+                        onEdit: 'Modules.Admin.editStatusPenyimpanan',
+                        onDelete: 'Modules.Admin.deletePenyimpanan'
+                    });
+                },
+
+                editStatusPenyimpanan: (id) => {
+                    const data = DB.getTable('penyimpanan').find(p => p.id === id);
+                    const html = `
+                        <form id="form-status-peny" class="space-y-4">
+                            <div class="bg-slate-50 p-3 rounded text-sm mb-4">
+                                <p><strong>Barang:</strong> ${data.namaBarang} (${data.jumlah} unit)</p>
+                                <p><strong>Penitip:</strong> ${data.namaUser}</p>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Status Penitipan</label>
+                                <select id="p-status" class="w-full border p-2 rounded focus:border-auto-orange outline-none">
+                                    <option value="Pending" ${data.status==='Pending'?'selected':''}>Pending (Menunggu Persetujuan)</option>
+                                    <option value="Disimpan" ${data.status==='Disimpan'?'selected':''}>Disimpan (Disetujui)</option>
+                                    <option value="Diambil" ${data.status==='Diambil'?'selected':''}>Sudah Diambil</option>
+                                    <option value="Terlambat" ${data.status==='Terlambat'?'selected':''}>Terlambat Diambil</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Catatan Admin</label><textarea id="p-catatan" class="w-full border p-2 rounded focus:border-auto-orange outline-none h-20">${data.catatan || ''}</textarea></div>
+                            <div class="flex justify-end gap-2 pt-4 border-t">
+                                <button type="button" onclick="UI.closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded transition">Batal</button>
+                                <button type="submit" class="px-4 py-2 bg-auto-orange hover:bg-auto-orangedark text-white rounded transition">Update Status</button>
+                            </div>
+                        </form>
+                    `;
+                    UI.openModal('Update Status Penitipan', html);
+
+                    document.getElementById('form-status-peny').onsubmit = (e) => {
+                        e.preventDefault();
+                        const newStatus = document.getElementById('p-status').value;
+                        DB.update('penyimpanan', id, {
+                            status: newStatus,
+                            catatan: document.getElementById('p-catatan').value
+                        });
+
+                        // Kirim notifikasi ke user
+                        DB.addNotif(data.userId,
+                            `Status penitipan barang "${data.namaBarang}" Anda telah diubah menjadi: ${newStatus}`
+                        );
+
+                        UI.closeModal();
+                        UI.toast('Status berhasil diupdate!');
+                        App.navigate('penyimpanan');
+                    };
+                },
+
+                deletePenyimpanan: (id) => {
+                    UI.confirm('Hapus Data Penitipan?', 'Data tidak bisa dikembalikan.', () => {
+                        DB.delete('penyimpanan', id);
+                        UI.toast('Data terhapus.');
+                        App.navigate('penyimpanan');
+                    });
+                },
+
+                renderUsers: () => {
+                    document.getElementById('topbar-title').innerText = 'Manajemen Pengguna';
+                    document.getElementById('main-content').innerHTML = `
+                        <div id="table-users-container"></div>
+                        <button onclick="Modules.Admin.formUser()" class="fab bg-auto-orange text-white w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-lg hover:bg-auto-orangedark transition"><i class="fa-solid fa-plus"></i></button>
+                    `;
+
+                    new DataTable({
+                        containerId: 'table-users-container',
+                        title: 'Data_User',
+                        data: DB.getTable('users'),
+                        columns: [{
+                                key: 'nama',
+                                label: 'Nama Lengkap',
+                                format: 'bold'
+                            },
+                            {
+                                key: 'username',
+                                label: 'Username'
+                            },
+                            {
+                                key: 'role',
+                                label: 'Role',
+                                format: 'badge'
+                            },
+                            {
+                                key: 'hp',
+                                label: 'No. HP'
+                            },
+                            {
+                                key: 'status',
+                                label: 'Status'
+                            }
+                        ],
+                        filters: [{
+                            key: 'role',
+                            label: 'Role',
+                            options: ['admin', 'tamu']
+                        }],
+                        actions: ['edit', 'delete'],
+                        onEdit: 'Modules.Admin.formUser',
+                        onDelete: 'Modules.Admin.deleteUser'
+                    });
+                },
+
+                formUser: (id = null) => {
+                    const isEdit = !!id;
+                    const data = isEdit ? DB.getTable('users').find(u => u.id === id) : {};
+                    const html = `
+                        <form id="form-crud-user" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Nama Lengkap</label><input type="text" id="u-nama" value="${data.nama||''}" required class="w-full border p-2 rounded outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Username</label><input type="text" id="u-user" value="${data.username||''}" ${isEdit?'readonly':''} required class="w-full border p-2 rounded outline-none ${isEdit?'bg-slate-100':''}"></div>
+                                <div><label class="block text-sm font-medium mb-1">Password ${isEdit?'(Kosongkan jika tdk diubah)':''}</label><input type="password" id="u-pass" ${!isEdit?'required':''} class="w-full border p-2 rounded outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Role</label>
+                                    <select id="u-role" class="w-full border p-2 rounded outline-none">
+                                        <option value="tamu" ${data.role==='tamu'?'selected':''}>Tamu</option>
+                                        <option value="admin" ${data.role==='admin'?'selected':''}>Admin</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm font-medium mb-1">Email</label><input type="email" id="u-email" value="${data.email||''}" class="w-full border p-2 rounded outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">No. HP</label><input type="number" id="u-hp" value="${data.hp||''}" class="w-full border p-2 rounded outline-none"></div>
+                                ${isEdit ? `<div><label class="block text-sm font-medium mb-1">Status Akun</label>
+                                    <select id="u-status" class="w-full border p-2 rounded outline-none">
+                                        <option value="active" ${data.status==='active'?'selected':''}>Active</option>
+                                        <option value="disabled" ${data.status==='disabled'?'selected':''}>Disabled</option>
+                                    </select>
+                                </div>` : ''}
+                            </div>
+                            <div class="flex justify-end gap-2 pt-4 border-t">
+                                <button type="button" onclick="UI.closeModal()" class="px-4 py-2 bg-slate-200 rounded">Batal</button>
+                                <button type="submit" class="px-4 py-2 bg-auto-orange text-white rounded">Simpan</button>
+                            </div>
+                        </form>
+                    `;
+                    UI.openModal(isEdit ? 'Edit User' : 'Tambah User', html);
+
+                    document.getElementById('form-crud-user').onsubmit = (e) => {
+                        e.preventDefault();
+                        const username = document.getElementById('u-user').value;
+
+                        // Validasi duplikat
+                        if (!isEdit && DB.getTable('users').some(u => u.username === username)) {
+                            return UI.toast('Username sudah terdaftar!', 'error');
+                        }
+
+                        const payload = {
+                            nama: document.getElementById('u-nama').value,
+                            username: username,
+                            role: document.getElementById('u-role').value,
+                            email: document.getElementById('u-email').value,
+                            hp: document.getElementById('u-hp').value,
+                            status: isEdit ? document.getElementById('u-status').value : 'active'
+                        };
+                        const pwd = document.getElementById('u-pass').value;
+                        if (pwd) payload.password = pwd;
+
+                        if (isEdit) {
+                            if (id === App.currentUser.id && payload.status === 'disabled') return UI.toast(
+                                'Tidak bisa menonaktifkan diri sendiri!', 'error');
+                            DB.update('users', id, payload);
+                        } else {
+                            DB.insert('users', payload);
+                        }
+
+                        UI.closeModal();
+                        UI.toast('Data user disimpan!');
+                        App.navigate('users');
+                    };
+                },
+
+                deleteUser: (id) => {
+                    if (id === App.currentUser.id) return UI.toast(
+                        'Tidak bisa menghapus akun yang sedang login', 'error');
+                    UI.confirm('Hapus User?', 'Semua data terkait tidak terhapus otomatis.', () => {
+                        DB.delete('users', id);
+                        UI.toast('User dihapus.');
+                        App.navigate('users');
+                    });
+                },
+
+                renderLogs: () => {
+                    document.getElementById('topbar-title').innerText = 'Riwayat Aktivitas Sistem';
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="mb-4 flex justify-end">
+                            <button onclick="Modules.Admin.clearLogs()" class="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 transition"><i class="fa-solid fa-trash-alt mr-2"></i>Kosongkan Log</button>
+                        </div>
+                        <div id="table-logs-container"></div>
+                    `;
+                    new DataTable({
+                        containerId: 'table-logs-container',
+                        title: 'System_Logs',
+                        data: DB.getTable('logs'),
+                        columns: [{
+                                key: 'waktu',
+                                label: 'Waktu',
+                                format: 'date'
+                            },
+                            {
+                                key: 'user',
+                                label: 'Pengguna',
+                                format: 'bold'
+                            },
+                            {
+                                key: 'aktivitas',
+                                label: 'Aktivitas'
+                            }
+                        ],
+                        actions: ['delete'],
+                        onDelete: 'Modules.Admin.deleteLog'
+                    });
+                },
+
+                deleteLog: (id) => {
+                    DB.delete('logs', id);
+                    App.navigate('logs');
+                },
+                clearLogs: () => {
+                    UI.confirm('Kosongkan Semua?', 'Semua riwayat akan hilang.', () => {
+                        DB.saveTable('logs', []);
+                        App.navigate('logs');
+                        UI.toast('Log dikosongkan.');
+                    });
+                },
+
+                renderLaporan: () => {
+                    document.getElementById('topbar-title').innerText = 'Laporan Sistem';
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border text-center">
+                                <i class="fa-solid fa-box text-5xl text-blue-500 mb-4"></i>
+                                <h3 class="text-lg font-bold mb-2">Laporan Data Barang</h3>
+                                <p class="text-sm text-slate-500 mb-4">Unduh seluruh data barang saat ini dalam format CSV/Excel.</p>
+                                <button onclick="Utils.downloadCSV(DB.getTable('barang'), 'Laporan_Barang')" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 w-full"><i class="fa-solid fa-download mr-2"></i> Download Laporan</button>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border text-center">
+                                <i class="fa-solid fa-warehouse text-5xl text-orange-500 mb-4"></i>
+                                <h3 class="text-lg font-bold mb-2">Laporan Penitipan</h3>
+                                <p class="text-sm text-slate-500 mb-4">Unduh riwayat transaksi penitipan barang lab bengkel.</p>
+                                <button onclick="Utils.downloadCSV(DB.getTable('penyimpanan'), 'Laporan_Penitipan')" class="bg-auto-orange text-white px-6 py-2 rounded-lg hover:bg-auto-orangedark w-full"><i class="fa-solid fa-download mr-2"></i> Download Laporan</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+
+            // ================= TAMU MODULES =================
+            Tamu: {
+                renderDashboard: () => {
+                    document.getElementById('topbar-title').innerText = 'Dashboard Tamu';
+                    const userId = App.currentUser.id;
+                    const myItems = DB.getTable('penyimpanan').filter(p => p.userId === userId);
+
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="bg-gradient-to-r from-auto-dark to-slate-800 rounded-xl p-8 text-white mb-6 shadow-lg fade-in">
+                            <h2 class="text-2xl font-bold mb-2">Halo, ${App.currentUser.nama}!</h2>
+                            <p class="text-slate-300">Selamat datang di Sistem Penyimpanan Lab Bengkel. Anda memiliki <strong class="text-auto-orange">${myItems.length}</strong> transaksi penitipan.</p>
+                            <button onclick="App.navigate('titip')" class="mt-6 bg-auto-orange hover:bg-auto-orangedark px-6 py-2 rounded-lg font-bold transition shadow-lg"><i class="fa-solid fa-plus mr-2"></i> Titip Barang Baru</button>
+                        </div>
+                        <h3 class="font-bold text-slate-700 mb-4">Status Penitipan Terakhir</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${myItems.slice(0,3).map(item => `
+                                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h4 class="font-bold text-slate-800">${item.namaBarang}</h4>
+                                        ${UI.renderBadge(item.status)}
+                                    </div>
+                                    <p class="text-xs text-slate-500 mb-1"><i class="fa-regular fa-calendar mr-1"></i> Masuk: ${Utils.formatDate(item.tglMasuk)}</p>
+                                    <p class="text-xs text-slate-500"><i class="fa-solid fa-hourglass-half mr-1"></i> Estimasi: ${Utils.formatDate(item.estimasiAmbil)}</p>
+                                </div>
+                            `).join('')}
+                            ${myItems.length === 0 ? '<div class="col-span-3 text-center text-slate-500 py-8 bg-white rounded-xl border">Belum ada barang yang dititipkan.</div>' : ''}
+                        </div>
+                    `;
+                },
+
+                renderTitip: () => {
+                    document.getElementById('topbar-title').innerText = 'Data Penitipan Saya';
+                    document.getElementById('main-content').innerHTML = `
+                        <div id="table-titip-container"></div>
+                        <button onclick="Modules.Tamu.formTitip()" class="fab bg-auto-orange text-white w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-lg hover:bg-auto-orangedark transition"><i class="fa-solid fa-plus"></i></button>
+                    `;
+
+                    const myData = DB.getTable('penyimpanan').filter(p => p.userId === App.currentUser.id);
+
+                    new DataTable({
+                        containerId: 'table-titip-container',
+                        title: 'Penitipan_Saya',
+                        data: myData,
+                        columns: [{
+                                key: 'namaBarang',
+                                label: 'Barang',
+                                format: 'bold'
+                            },
+                            {
+                                key: 'kategori',
+                                label: 'Kategori'
+                            },
+                            {
+                                key: 'jumlah',
+                                label: 'Qty'
+                            },
+                            {
+                                key: 'tglMasuk',
+                                label: 'Tanggal Titip',
+                                format: 'date'
+                            },
+                            {
+                                key: 'status',
+                                label: 'Status',
+                                format: 'badge'
+                            }
+                        ],
+                        actions: [], // Custom actions
+                        customActions: [{
+                                title: 'Edit',
+                                icon: 'fa-solid fa-edit',
+                                class: 'text-blue-500 hover:text-blue-700',
+                                action: 'Modules.Tamu.formTitip',
+                                condition: (row) => row.status === 'Pending'
+                            },
+                            {
+                                title: 'Batalkan',
+                                icon: 'fa-solid fa-times-circle',
+                                class: 'text-red-500 hover:text-red-700',
+                                action: 'Modules.Tamu.batalTitip',
+                                condition: (row) => row.status === 'Pending'
+                            },
+                            {
+                                title: 'Detail',
+                                icon: 'fa-solid fa-eye',
+                                class: 'text-slate-500 hover:text-slate-700',
+                                action: 'Modules.Tamu.detailTitip',
+                                condition: (row) => true
+                            }
+                        ]
+                    });
+                },
+
+                formTitip: (id = null) => {
+                    const isEdit = !!id;
+                    const data = isEdit ? DB.getTable('penyimpanan').find(p => p.id === id) : {};
+
+                    const html = `
+                        <form id="form-crud-titip" class="space-y-4">
+                            <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-4 border border-blue-200">
+                                <i class="fa-solid fa-info-circle mr-2"></i> Barang yang dititipkan akan diverifikasi oleh Admin terlebih dahulu (Status: Pending).
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Nama Barang</label><input type="text" id="t-nama" value="${data.namaBarang||''}" required class="w-full border p-2 rounded outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Kategori</label>
+                                    <select id="t-kat" required class="w-full border p-2 rounded outline-none">
+                                        <option value="Tools" ${data.kategori==='Tools'?'selected':''}>Tools</option>
+                                        <option value="Aksesoris" ${data.kategori==='Aksesoris'?'selected':''}>Aksesoris Pribadi</option>
+                                        <option value="Lainnya" ${data.kategori==='Lainnya'?'selected':''}>Lainnya</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm font-medium mb-1">Jumlah</label><input type="number" min="1" id="t-qty" value="${data.jumlah||'1'}" required class="w-full border p-2 rounded outline-none"></div>
+                                <div><label class="block text-sm font-medium mb-1">Estimasi Diambil</label><input type="date" id="t-tgl" value="${data.estimasiAmbil ? data.estimasiAmbil.split('T')[0] : ''}" required class="w-full border p-2 rounded outline-none"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Kondisi Saat Dititipkan</label><textarea id="t-kondisi" required class="w-full border p-2 rounded outline-none h-16" placeholder="Contoh: Lecet sedikit di bagian kanan">${data.kondisi||''}</textarea></div>
+                            <div class="flex justify-end gap-2 pt-4 border-t">
+                                <button type="button" onclick="UI.closeModal()" class="px-4 py-2 bg-slate-200 rounded">Batal</button>
+                                <button type="submit" class="px-4 py-2 bg-auto-orange text-white rounded">${isEdit ? 'Update' : 'Ajukan Penitipan'}</button>
+                            </div>
+                        </form>
+                    `;
+                    UI.openModal(isEdit ? 'Edit Pengajuan' : 'Form Titip Barang', html);
+
+                    document.getElementById('form-crud-titip').onsubmit = (e) => {
+                        e.preventDefault();
+                        const payload = {
+                            userId: App.currentUser.id,
+                            namaUser: App.currentUser.nama,
+                            namaBarang: document.getElementById('t-nama').value,
+                            kategori: document.getElementById('t-kat').value,
+                            jumlah: parseInt(document.getElementById('t-qty').value),
+                            kondisi: document.getElementById('t-kondisi').value,
+                            estimasiAmbil: new Date(document.getElementById('t-tgl').value)
+                                .toISOString(),
+                            status: 'Pending',
+                            tglMasuk: isEdit ? data.tglMasuk : new Date().toISOString()
+                        };
+
+                        if (isEdit) DB.update('penyimpanan', id, payload);
+                        else DB.insert('penyimpanan', payload);
+
+                        UI.closeModal();
+                        UI.toast('Pengajuan penitipan berhasil disimpan!');
+                        App.navigate('titip');
+                    };
+                },
+
+                batalTitip: (id) => {
+                    UI.confirm('Batalkan Penitipan?', 'Pengajuan ini akan dihapus.', () => {
+                        DB.delete('penyimpanan', id);
+                        UI.toast('Dibatalkan.');
+                        App.navigate('titip');
+                    });
+                },
+
+                detailTitip: (id) => {
+                    const data = DB.getTable('penyimpanan').find(p => p.id === id);
+                    const html = `
+                        <div class="space-y-3 text-sm">
+                            <p><strong>ID Transaksi:</strong> ${data.id}</p>
+                            <p><strong>Barang:</strong> ${data.namaBarang} (${data.jumlah} unit)</p>
+                            <p><strong>Kategori:</strong> ${data.kategori}</p>
+                            <p><strong>Status:</strong> ${UI.renderBadge(data.status)}</p>
+                            <p><strong>Tgl Masuk:</strong> ${Utils.formatDate(data.tglMasuk)}</p>
+                            <p><strong>Estimasi Ambil:</strong> ${Utils.formatDate(data.estimasiAmbil)}</p>
+                            <p><strong>Kondisi:</strong> ${data.kondisi}</p>
+                            <div class="mt-4 p-3 bg-slate-100 rounded border">
+                                <strong>Catatan Admin:</strong><br>
+                                ${data.catatan || '<em class="text-slate-400">Tidak ada catatan</em>'}
+                            </div>
+                        </div>
+                    `;
+                    UI.openModal('Detail Penitipan', html);
+                },
+
+                renderProfil: () => {
+                    document.getElementById('topbar-title').innerText = 'Profil Saya';
+                    const user = App.currentUser;
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border p-6 md:p-8 fade-in">
+                            <div class="flex items-center gap-6 mb-8 pb-6 border-b">
+                                <img src="https://ui-avatars.com/api/?name=${user.nama}&size=100&background=f97316&color=fff" class="rounded-full shadow-md">
+                                <div>
+                                    <h2 class="text-2xl font-bold text-slate-800">${user.nama}</h2>
+                                    <p class="text-slate-500">@${user.username} • ${UI.renderBadge(user.role)}</p>
+                                </div>
+                            </div>
+                            <form id="form-profil" class="space-y-5">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label class="block text-sm font-medium mb-1">Nama Lengkap</label><input type="text" id="pr-nama" value="${user.nama}" required class="w-full border p-2 rounded outline-none focus:border-auto-orange"></div>
+                                    <div><label class="block text-sm font-medium mb-1">Email</label><input type="email" id="pr-email" value="${user.email||''}" required class="w-full border p-2 rounded outline-none focus:border-auto-orange"></div>
+                                    <div><label class="block text-sm font-medium mb-1">No. Handphone</label><input type="text" id="pr-hp" value="${user.hp||''}" required class="w-full border p-2 rounded outline-none focus:border-auto-orange"></div>
+                                    <div><label class="block text-sm font-medium mb-1">Password Baru <span class="text-xs text-slate-400">(Opsional)</span></label><input type="password" id="pr-pass" class="w-full border p-2 rounded outline-none focus:border-auto-orange"></div>
+                                </div>
+                                <div class="pt-4 flex justify-between items-center">
+                                    <button type="button" onclick="Modules.Tamu.hapusAkun()" class="text-red-500 hover:text-red-700 text-sm font-medium"><i class="fa-solid fa-trash mr-1"></i> Hapus Akun Saya</button>
+                                    <button type="submit" class="bg-auto-orange text-white px-6 py-2 rounded-lg hover:bg-auto-orangedark transition shadow-md">Simpan Perubahan</button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
+
+                    document.getElementById('form-profil').onsubmit = (e) => {
+                        e.preventDefault();
+                        const payload = {
+                            nama: document.getElementById('pr-nama').value,
+                            email: document.getElementById('pr-email').value,
+                            hp: document.getElementById('pr-hp').value
+                        };
+                        const pass = document.getElementById('pr-pass').value;
+                        if (pass) payload.password = pass;
+
+                        DB.update('users', user.id, payload);
+
+                        // Update session
+                        App.currentUser = {
+                            ...App.currentUser,
+                            ...payload
+                        };
+                        localStorage.setItem('bengkel_session', JSON.stringify(App.currentUser));
+
+                        UI.toast('Profil berhasil diupdate!');
+                        App.showApp(); // Refresh topbar/sidebar
+                        App.navigate('profil');
+                    };
+                },
+
+                hapusAkun: () => {
+                    UI.confirm('Hapus Akun Permanen?', 'Semua data Anda akan hilang.', () => {
+                        DB.delete('users', App.currentUser.id);
+                        App.logout();
+                        UI.toast('Akun berhasil dihapus.', 'info');
+                    });
+                }
+            },
+
+            // ================= GLOBAL MODULES =================
+            Global: {
+                renderNotifikasi: () => {
+                    document.getElementById('topbar-title').innerText = 'Notifikasi Sistem';
+                    let notifs = DB.getTable('notifikasi').filter(n => n.userId === App.currentUser.id);
+
+                    // Mark as read immediately on view
+                    let updated = false;
+                    notifs.forEach(n => {
+                        if (n.status === 'unread') {
+                            n.status = 'read';
+                            updated = true;
+                        }
+                    });
+                    if (updated) {
+                        DB.saveTable('notifikasi', DB.getTable('notifikasi').map(n => n.userId === App
+                            .currentUser.id ? {
+                                ...n,
+                                status: 'read'
+                            } : n));
+                        UI.updateNotifBadge();
+                    }
+
+                    document.getElementById('main-content').innerHTML = `
+                        <div class="max-w-3xl mx-auto">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-slate-700">Semua Notifikasi</h3>
+                                <button onclick="Modules.Global.clearNotif()" class="text-sm text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-alt mr-1"></i> Bersihkan</button>
+                            </div>
+                            <div class="space-y-3">
+                                ${notifs.length === 0 ? '<div class="text-center p-8 text-slate-500 bg-white rounded-xl border">Tidak ada notifikasi</div>' : ''}
+                                ${notifs.map(n => `
+                                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-bell"></i></div>
+                                        <div>
+                                            <p class="text-sm text-slate-800">${n.pesan}</p>
+                                            <p class="text-xs text-slate-400 mt-1">${Utils.formatDate(n.waktu)}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                },
+                clearNotif: () => {
+                    let allNotifs = DB.getTable('notifikasi');
+                    let filtered = allNotifs.filter(n => n.userId !== App.currentUser.id);
+                    DB.saveTable('notifikasi', filtered);
+                    Modules.Global.renderNotifikasi();
+                    UI.toast('Notifikasi dibersihkan');
+                }
+            },
+
+            // ================= HELPERS =================
+            Helpers: {
+                statCard: (title, count, icon, colorClass) => `
+                    <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition cursor-default">
+                        <div class="w-14 h-14 rounded-full ${colorClass} text-white flex items-center justify-center text-2xl shadow-inner"><i class="fa-solid ${icon}"></i></div>
+                        <div><p class="text-sm text-slate-500 font-medium">${title}</p><h4 class="text-2xl font-bold text-slate-800">${count}</h4></div>
+                    </div>
+                `
+            }
+        };
+
+        // --- 7. INITIALIZE APP ON LOAD ---
+        window.addEventListener('DOMContentLoaded', App.init);
+    </script>
+</body>
+
+</html>
